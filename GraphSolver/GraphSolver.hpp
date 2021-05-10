@@ -25,6 +25,12 @@ namespace solver
 
     private:
         void CreateIncidenceGraph(const std::string &in_file);
+        void CheckIfGraphHasOnlyOneEntry();
+        
+        int GetGraphSize() const
+        {
+            return this->incidence_graph_.size();
+        }
 
     private:
         IncidenceGraph incidence_graph_;

@@ -6,6 +6,7 @@ namespace solver
     {
         this->CreateIncidenceGraph(input_path);
         this->PrintIncidenceGraph();
+        this->CheckIfGraphHasOnlyOneEntry();
     }
 
     GraphSolver::~GraphSolver()
@@ -103,6 +104,21 @@ namespace solver
             std::cerr << "Could not read file " << in_file << "\n";
             throw std::invalid_argument("File not found.");
         }
+    }
+    
+    void GraphSolver::CheckIfGraphHasOnlyOneEntry() 
+    {
+        for(int i = 0; i < this->GetGraphSize(); i++)
+        {
+            int cnt = 0;
+            for(int j = 0; j < this->GetGraphSize(); j++)
+            {
+                cnt += this->incidence_graph_[j][i].first;
+            }
+            if(cnt == 1)
+                return;
+        }
+        throw std::invalid_argument("Input graph does not have single entrance");
     }
 
 } // namespace solver

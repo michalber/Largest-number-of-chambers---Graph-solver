@@ -1,4 +1,4 @@
-#include "GraphSolver.hpp"
+#include "GraphSolver/GraphSolver.hpp"
 
 std::string GetCmdOption(int argc, char* argv[], const std::string& option)
 {
