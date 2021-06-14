@@ -2,12 +2,13 @@
 
 namespace solver
 {
-    GraphSolver::GraphSolver(const std::string &input_path, int max_len) : max_length(max_len)
+    GraphSolver::GraphSolver(const std::string &input_path, int max_cost) : max_cost_(max_cost)
     {
         this->CreateIncidenceGraph(input_path);
         this->PrintIncidenceGraph();
-        this->CheckIfGraphHasOnlyOneEntry();
         this->CreateAdjacenctListFromGraph();
+        this->FindRootVertexOfGraph();
+        this->CheckIfGraphHasOnlyOneEntry();
     }
 
     GraphSolver::~GraphSolver()
@@ -31,13 +32,13 @@ namespace solver
         PrintElement("");
         for (auto _ : this->incidence_graph_)
         {
-            PrintElement("Edge : Weight " + std::to_string(++cnt));
+            PrintElement("Edge : Weight " + std::to_string(cnt++));
         }
         std::cout << std::endl;
         cnt = 0;
         for (auto &line : this->incidence_graph_)
         {
-            PrintElement("State " + std::to_string(++cnt));
+            PrintElement("State " + std::to_string(cnt++));
             for (auto &el : line)
             {
                 PrintElement(std::to_string(el.first) + " : " + std::to_string(el.second));
@@ -66,7 +67,9 @@ namespace solver
         }
 
         std::vector<int> cost(this->GetGraphSize(), INT_MAX);
-        cost[7] = 0;
+        cost[root_vertex_] = 0;
+
+        std::vector<int> paths(this->GetGraphSize(), 1);
 
         // Process the vertices in topological order, i.e., in order
         // of their decreasing departure time in DFS
@@ -86,15 +89,43 @@ namespace solver
                 if (cost[v] != INT_MAX && cost[v] + w < cost[u])
                 {
                     cost[u] = cost[v] + w;
+                    paths[u]++;
                 }
             }
         }
 
+        for (int i = 0; i < this->GetGraphSize(); i++)
+            cost[i] *= -1;
+
         // print the longest paths
+        results_.resize(this->GetGraphSize());
+
         for (int i = 0; i < this->GetGraphSize(); i++)
         {
-            std::cout << "dist(" << 7 << ", " << i << ") = " << std::setw(2) << cost[i] * -1;
-            std::cout << std::endl;
+            std::cout << "dist(" << root_vertex_ << ", " << i << ") = " << std::setw(2) << cost[i] << std::endl;
+            const auto len = FindAllPaths(this->root_vertex_, i);
+            results_[i] = {cost[i], len};
+        }
+
+        std::sort(results_.begin(), results_.end(), [](const std::pair<int, int> &a, const std::pair<int, int> &b)
+                  { return a.first > b.first; });
+
+        if (results_[0].first <= max_cost_)
+        {
+            std::sort(results_.begin(), results_.end(), [](const std::pair<int, int> &a, const std::pair<int, int> &b)
+                      { return a.second > b.second; });
+            std::cout << "Having budget of " << this->max_cost_ << ", largest number of chambers is: " << results_[0].second << std::endl;
+        }
+        else
+        {
+            for (const auto &el : results_)
+            {
+                if(el.first <= max_cost_)
+                {
+                    std::cout << "Having budget of " << this->max_cost_ << ", largest number of chambers is: " << el.second << std::endl;
+                    return;
+                }
+            }
         }
     }
 
@@ -144,8 +175,6 @@ namespace solver
                     }
                     catch (const std::invalid_argument e)
                     {
-                        std::cout << "NaN found in file " << in_file << " line " << l
-                                  << std::endl;
                         e.what();
                     }
                 }
@@ -167,22 +196,59 @@ namespace solver
             int cnt = 0;
             for (int j = 0; j < this->GetGraphSize(); j++)
             {
-                cnt += this->incidence_graph_[j][i].first;
+                cnt += this->incidence_graph_[i][j].first;
             }
-            if (cnt == 1)
+            if (cnt == 0)
                 return;
         }
         throw std::invalid_argument("Input graph does not have single entrance");
+    }
+
+    void GraphSolver::FindRootVertexOfGraph()
+    {
+        // to keep track of all previously visited vertices in DFS
+        std::vector<int> departure(this->GetGraphSize(), -1);
+
+        // to keep track of whether a vertex is discovered or not
+        std::vector<bool> visited(this->GetGraphSize());
+
+        // find the last starting vertex `v` in DFS
+        int v = 0;
+        int time = 0;
+        for (int i = 0; i < this->GetGraphSize(); i++)
+        {
+            if (!visited[i])
+            {
+                DFS(i, visited, departure, time);
+                v = i;
+            }
+        }
+
+        // reset the visited vertices
+        std::fill(visited.begin(), visited.end(), false);
+
+        // perform DFS on the graph from the last starting vertex `v`
+        DFS(v, visited, departure, time);
+
+        // return -1 if all vertices are not reachable from vertex `v`
+        for (int i = 0; i < this->GetGraphSize(); i++)
+        {
+            if (!visited[i])
+            {
+                return;
+            }
+        }
+
+        std::cout << "Root vertex of graph is: " << v << std::endl;
+        root_vertex_ = v;
     }
 
     void GraphSolver::CreateAdjacenctListFromGraph()
     {
         this->graph_.SetSize(this->GetGraphSize());
 
-        //row
         for (int i = 0; i < this->GetGraphSize(); i++)
         {
-            //col
             for (int j = 0; j < this->GetGraphSize(); j++)
             {
                 if (this->incidence_graph_[j][i].first == 1)
@@ -190,18 +256,8 @@ namespace solver
                     this->graph_.AddEdge(Edge{.src = i,
                                               .dest = j,
                                               .weight = this->incidence_graph_[j][i].second});
-                    // std::cout << "(" << i << ", " << j << ", " << this->incidence_graph_[j][i].second << "), ";
                 }
             }
-        }
-
-        for(auto &row : this->graph_.GetAdjacencyList())
-        {
-            for(auto &col : row)
-            {
-                std::cout << "(" << col.src << ", " << col.dest << ", " << col.weight << "), ";
-            }
-            std::cout << std::endl;
         }
     }
 

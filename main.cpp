@@ -18,18 +18,19 @@ std::string GetCmdOption(int argc, char *argv[], const std::string &option)
 
 int main(int argc, char **argv)
 {
-    const std::string input_path = GetCmdOption(argc, argv, "-in=");
-    const std::string max_length = GetCmdOption(argc, argv, "-len=");
+    // const std::string input_path = GetCmdOption(argc, argv, "-in=");
+    // const std::string max_length = GetCmdOption(argc, argv, "-len=");
 
-    if (input_path == "")
-    {
-        throw std::invalid_argument("Please give input CSV file");
-    }
-    if (max_length == "")
-    {
-        throw std::invalid_argument("Please give input max length");
-    }
+    // if (input_path == "")
+    // {
+    //     throw std::invalid_argument("Please give input CSV file");
+    // }
+    // if (max_length == "")
+    // {
+    //     throw std::invalid_argument("Please give input max length");
+    // }
 
-    solver::GraphSolver solver(input_path, std::stoi(max_length));
+    // solver::GraphSolver solver(input_path, std::stoi(max_length));
+    solver::GraphSolver solver("../InputGraph.csv", 8);
     solver.SolveGraph();
 }
