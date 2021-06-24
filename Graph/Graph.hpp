@@ -9,6 +9,8 @@ struct Edge
     int src, dest, weight;
 };
 
+using IncidenceGraph = std::vector<std::vector<std::pair<int, int>>>;
+
 class Graph
 {
     using AdjacencyList = std::vector<std::vector<Edge>>;

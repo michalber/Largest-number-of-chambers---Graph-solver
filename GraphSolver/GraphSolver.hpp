@@ -21,14 +21,13 @@ namespace solver
 
     class GraphSolver
     {
-        using IncidenceGraph = std::vector<std::vector<std::pair<int, int>>>;
+        using PathWithCost = std::pair<std::vector<int>, int>;
 
     public:
         explicit GraphSolver(const std::string &input_path, int max_cost);
         ~GraphSolver();
         void SolveGraph();
         void PrintIncidenceGraph();
-        void FindLongestDistance();
 
     private:
         void CreateIncidenceGraph(const std::string &in_file);
@@ -41,69 +40,32 @@ namespace solver
             return this->incidence_graph_.size();
         }
 
-        void DFS(int v, std::vector<bool> &discovered, std::vector<int> &departure, int &time);
-
-        int FindAllPaths(int src, int dst)
+        void SetGraphSize(int size)
         {
-            // Clear previously stored paths if any
-            allpaths.clear();
-            std::vector<int> path;
-
-            // As the path begins with source, push the source node into the path
-            path.push_back(src);
-            std::cout << "Path: ";
-            DFS_PathSearch(src, dst, path);
-            // Print all paths in the graph
-            // Print();
-            std::sort(allpaths.begin(), allpaths.end(), [](const std::vector<int> &a, const std::vector<int> &b)
-                      { return a.size() > b.size(); });
-
-            for (const auto &node : allpaths[0])
-                std::cout << node << " ";
-            std::cout << "\n"
-                      << std::endl;
-
-            return allpaths[0].size();
+            this->graph_size_ = size;
         }
 
-        void Print()
-        {
-            // Print all the paths
-            for (const auto &path : allpaths)
-            {
-                std::cout << "Path : ";
-                for (const auto &node : path)
-                    std::cout << node << " ";
-                std::cout << std::endl;
-            }
-        }
+        void FindAllPaths(int s, int d);
 
-        void DFS_PathSearch(int src, int dst, std::vector<int> &path)
-        {
+        // A recursive function to print all paths from 'u' to 'd'.
+        // visited[] keeps track of vertices in current path.
+        // path[] stores actual vertices and path_index is current
+        // index in path[]
+        void FindAllPathsUtil(int u, int d, bool visited[],
+                                      int path[], int &path_index);
 
-            if (src == dst)
-            {
-                allpaths.push_back(path);
-            }
-            else
-            {
-                for (const auto &adjnode : this->graph_.GetAdjacencyList()[src])
-                {
-                    path.push_back(adjnode.dest);
-                    DFS_PathSearch(adjnode.dest, dst, path);
-                    path.pop_back();
-                }
-            }
-        }
+        void CalcCostOfPaths();
+        void SortPathsDescendingSize();
+        void FindMaxBombsPlanted();
 
     private:
         IncidenceGraph incidence_graph_;
         Graph graph_;
         int max_cost_ = 0;
         int root_vertex_ = 0;
+        int graph_size_ = 0;
 
-        std::vector<std::vector<int>> allpaths;
-        std::vector<std::pair<int, int>> results_;
+        std::vector<PathWithCost> allpaths_;
     };
 } // namespace solver
 

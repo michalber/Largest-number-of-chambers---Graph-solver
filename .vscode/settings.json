@@ -52,6 +52,8 @@
         "future": "cpp",
         "iomanip": "cpp",
         "mutex": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "list": "cpp",
+        "set": "cpp"
     }
 }

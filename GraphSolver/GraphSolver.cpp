@@ -7,8 +7,10 @@ namespace solver
         this->CreateIncidenceGraph(input_path);
         this->PrintIncidenceGraph();
         this->CreateAdjacenctListFromGraph();
-        this->FindRootVertexOfGraph();
-        this->CheckIfGraphHasOnlyOneEntry();
+
+        // Used in directed graph. Now we use undirected
+        // this->FindRootVertexOfGraph();
+        // this->CheckIfGraphHasOnlyOneEntry();
     }
 
     GraphSolver::~GraphSolver()
@@ -17,7 +19,30 @@ namespace solver
 
     void GraphSolver::SolveGraph()
     {
-        this->FindLongestDistance();
+        // Find all paths from input vertex to all other vertexes
+        for (int i = 0; i < this->GetGraphSize(); i++)
+        {
+            this->FindAllPaths(0, i);
+        }
+
+        this->CalcCostOfPaths();
+        this->SortPathsDescendingSize();
+
+        // Print paths
+        for (const auto &vec : this->allpaths_)
+        {
+            std::cout << "Path: {";
+            for (const auto &el : vec.first)
+            {
+                std::cout << el;
+                if (el != vec.first.back())
+                    std::cout << " -> ";
+            }
+            std::cout << "} | Cost of path is: " << vec.second;
+            std::cout << std::endl;
+        }
+
+        FindMaxBombsPlanted();
     }
 
     template <typename T>
@@ -44,88 +69,6 @@ namespace solver
                 PrintElement(std::to_string(el.first) + " : " + std::to_string(el.second));
             }
             std::cout << std::endl;
-        }
-    }
-
-    void GraphSolver::FindLongestDistance()
-    {
-        // departure[] stores vertex number having its departure
-        // time equal to the index of it
-        std::vector<int> departure(this->GetGraphSize(), -1);
-
-        // to keep track of whether a vertex is discovered or not
-        std::vector<bool> discovered(this->GetGraphSize());
-        int time = 0;
-
-        // perform DFS on all undiscovered vertices
-        for (int i = 0; i < this->GetGraphSize(); i++)
-        {
-            if (!discovered[i])
-            {
-                DFS(i, discovered, departure, time);
-            }
-        }
-
-        std::vector<int> cost(this->GetGraphSize(), INT_MAX);
-        cost[root_vertex_] = 0;
-
-        std::vector<int> paths(this->GetGraphSize(), 1);
-
-        // Process the vertices in topological order, i.e., in order
-        // of their decreasing departure time in DFS
-        for (int i = this->GetGraphSize() - 1; i >= 0; i--)
-        {
-            // for each vertex in topological order,
-            // relax the cost of its adjacent vertices
-            int v = departure[i];
-            for (Edge e : this->graph_.GetAdjacencyList()[v])
-            {
-                // edge `e` from `v` to `u` having weight `w`
-                int u = e.dest;
-                int w = e.weight * -1; // make edge weight negative
-
-                // if the distance to destination `u` can be shortened by
-                // taking edge `v —> u`, then update cost to the new lower value
-                if (cost[v] != INT_MAX && cost[v] + w < cost[u])
-                {
-                    cost[u] = cost[v] + w;
-                    paths[u]++;
-                }
-            }
-        }
-
-        for (int i = 0; i < this->GetGraphSize(); i++)
-            cost[i] *= -1;
-
-        // print the longest paths
-        results_.resize(this->GetGraphSize());
-
-        for (int i = 0; i < this->GetGraphSize(); i++)
-        {
-            std::cout << "dist(" << root_vertex_ << ", " << i << ") = " << std::setw(2) << cost[i] << std::endl;
-            const auto len = FindAllPaths(this->root_vertex_, i);
-            results_[i] = {cost[i], len};
-        }
-
-        std::sort(results_.begin(), results_.end(), [](const std::pair<int, int> &a, const std::pair<int, int> &b)
-                  { return a.first > b.first; });
-
-        if (results_[0].first <= max_cost_)
-        {
-            std::sort(results_.begin(), results_.end(), [](const std::pair<int, int> &a, const std::pair<int, int> &b)
-                      { return a.second > b.second; });
-            std::cout << "Having budget of " << this->max_cost_ << ", largest number of chambers is: " << results_[0].second << std::endl;
-        }
-        else
-        {
-            for (const auto &el : results_)
-            {
-                if(el.first <= max_cost_)
-                {
-                    std::cout << "Having budget of " << this->max_cost_ << ", largest number of chambers is: " << el.second << std::endl;
-                    return;
-                }
-            }
         }
     }
 
@@ -181,6 +124,7 @@ namespace solver
                 this->incidence_graph_.push_back(record);
             }
         }
+        this->SetGraphSize(this->incidence_graph_.size());
 
         if (!input_file.eof())
         {
@@ -206,41 +150,42 @@ namespace solver
 
     void GraphSolver::FindRootVertexOfGraph()
     {
-        // to keep track of all previously visited vertices in DFS
-        std::vector<int> departure(this->GetGraphSize(), -1);
+        // // to keep track of all previously visited vertices in DFS
+        // std::vector<int> departure(this->GetGraphSize(), -1);
 
-        // to keep track of whether a vertex is discovered or not
-        std::vector<bool> visited(this->GetGraphSize());
+        // // to keep track of whether a vertex is discovered or not
+        // std::vector<bool> visited(this->GetGraphSize());
 
-        // find the last starting vertex `v` in DFS
-        int v = 0;
-        int time = 0;
-        for (int i = 0; i < this->GetGraphSize(); i++)
-        {
-            if (!visited[i])
-            {
-                DFS(i, visited, departure, time);
-                v = i;
-            }
-        }
+        // // find the last starting vertex `v` in DFS
+        // int v = 0;
+        // int time = 0;
+        // for (int i = 0; i < this->GetGraphSize(); i++)
+        // {
+        //     if (!visited[i])
+        //     {
+        //         DFS(i, visited, departure, time);
+        //         v = i;
+        //     }
+        // }
 
-        // reset the visited vertices
-        std::fill(visited.begin(), visited.end(), false);
+        // // reset the visited vertices
+        // std::fill(visited.begin(), visited.end(), false);
 
-        // perform DFS on the graph from the last starting vertex `v`
-        DFS(v, visited, departure, time);
+        // // perform DFS on the graph from the last starting vertex `v`
+        // DFS(v, visited, departure, time);
 
-        // return -1 if all vertices are not reachable from vertex `v`
-        for (int i = 0; i < this->GetGraphSize(); i++)
-        {
-            if (!visited[i])
-            {
-                return;
-            }
-        }
+        // // return -1 if all vertices are not reachable from vertex `v`
+        // for (int i = 0; i < this->GetGraphSize(); i++)
+        // {
+        //     if (!visited[i])
+        //     {
+        //         throw std::invalid_argument("Graph does not have root vertex.");
+        //         return;
+        //     }
+        // }
 
-        std::cout << "Root vertex of graph is: " << v << std::endl;
-        root_vertex_ = v;
+        // std::cout << "Root vertex of graph is: " << v << std::endl;
+        // root_vertex_ = v;
     }
 
     void GraphSolver::CreateAdjacenctListFromGraph()
@@ -261,29 +206,102 @@ namespace solver
         }
     }
 
-    void GraphSolver::DFS(int v, std::vector<bool> &discovered, std::vector<int> &departure, int &time)
+    void GraphSolver::FindAllPaths(int s, int d)
     {
-        // mark the current node as discovered
-        discovered[v] = true;
+        // Mark all the vertices as not visited
+        bool visited[this->GetGraphSize()] = {false};
 
-        // set arrival time – not needed
-        // time++;
+        // Create an array to store paths
+        int path[this->GetGraphSize()] = {-1};
 
-        // do for every edge `v —> u`
-        for (Edge e : this->graph_.GetAdjacencyList()[v])
+        int path_index = 0; // Initialize path[] as empty
+
+        // Initialize all vertices as not visited
+        for (int i = 0; i < this->GetGraphSize(); i++)
+            visited[i] = false;
+
+        // Call the recursive helper function to print all paths
+        FindAllPathsUtil(s, d, visited, path, path_index);
+    }
+
+    void GraphSolver::FindAllPathsUtil(int u, int d, bool visited[],
+                                       int path[], int &path_index)
+    {
+        // Mark the current node and store it in path[]
+        visited[u] = true;
+        path[path_index] = u;
+        path_index++;
+
+        // If current vertex is same as destination, then print
+        // current path[]
+        if (u == d)
         {
-            int u = e.dest;
-            // if `u` is not yet discovered
-            if (!discovered[u])
+            std::vector<int> path_vec;
+            for (int i = 0; i < path_index; i++)
             {
-                DFS(u, discovered, departure, time);
+                // std::cout << path[i] << " ";
+                path_vec.push_back(path[i]);
+            }
+            this->allpaths_.push_back({path_vec, 0});
+            // std::cout << std::endl;
+        }
+        else // If current vertex is not destination
+        {
+            // Recur for all the vertices adjacent to current vertex
+            for (const auto &node : this->graph_.GetAdjacencyList()[u])
+            {
+                if (!visited[node.dest])
+                    FindAllPathsUtil(node.dest, d, visited, path, path_index);
             }
         }
 
-        // ready to backtrack
-        // set departure time of vertex `v`
-        departure[time] = v;
-        time++;
+        // Remove current vertex from path[] and mark it as unvisited
+        path_index--;
+        visited[u] = false;
+    }
+
+    void GraphSolver::CalcCostOfPaths()
+    {
+        // Print paths
+        for (auto &vec : this->allpaths_)
+        {
+            for (int i = 0; i < vec.first.size() - 1; i++)
+            {
+                //                                            row-dest  col-source
+                vec.second += this->incidence_graph_[vec.first[i + 1]][vec.first[i]].second;
+            }
+        }
+    }
+
+    void GraphSolver::SortPathsDescendingSize()
+    {
+        std::sort(this->allpaths_.begin(), this->allpaths_.end(),
+                  [](const PathWithCost &a, const PathWithCost &b)
+                  { return a.first.size() > b.first.size(); });
+    }
+
+    void GraphSolver::FindMaxBombsPlanted()
+    {
+        // Print paths
+        for (auto &vec : this->allpaths_)
+        {
+            if (vec.second <= this->max_cost_)
+            {
+                std::cout << "\n"
+                          << "Max bombs planted is: " << vec.first.size() << std::endl;
+
+                std::cout << "Path: {";
+                for (const auto &el : vec.first)
+                {
+                    std::cout << el;
+                    if (el != vec.first.back())
+                        std::cout << " -> ";
+                }
+                std::cout << "} | Cost of path is: " << vec.second;
+                std::cout << std::endl;
+                return;
+            }
+        }
     }
 
 } // namespace solver
